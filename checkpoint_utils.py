@@ -35,9 +35,8 @@ def load_checkpoint():
 
 import subprocess
 
-STORAGE_VM_IP = "3.26.210.103"
-SSH_KEY_PATH = r"C:\Users\VIDHYALAKSHMI\spotops-aws-key.pem"
-
+STORAGE_VM_IP = "3.27.11.65"
+SSH_KEY_PATH = os.path.expanduser("~/spotops-aws-key-v2.pem")
 def push_checkpoint_to_storage():
     subprocess.run([
         "scp", "-i", SSH_KEY_PATH, "-o", "StrictHostKeyChecking=no",
