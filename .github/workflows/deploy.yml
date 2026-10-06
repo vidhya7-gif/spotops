@@ -1,0 +1,26 @@
+﻿name: SpotOps Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-and-train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/spotops_key
+          chmod 600 ~/.ssh/spotops_key
+
+      - name: Copy files to Spot VM
+        run: |
+          scp -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no train.py checkpoint_utils.py ubuntu@${{ secrets.SPOT_VM_IP }}:/home/ubuntu/
+
+      - name: Start training on Spot VM
+        run: |
+          ssh -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.SPOT_VM_IP }} "nohup python3 train.py > train.log 2>&1 &"
