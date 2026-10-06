@@ -19,8 +19,18 @@ jobs:
 
       - name: Copy files to Spot VM
         run: |
-          scp -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no train.py checkpoint_utils.py ubuntu@${{ secrets.SPOT_VM_IP }}:/home/ubuntu/
+          scp -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no \
+            train.py checkpoint_utils.py \
+            ubuntu@${{ secrets.SPOT_VM_IP }}:/home/ubuntu/
+
+      - name: Copy files to Fallback VM
+        run: |
+          scp -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no \
+            train.py checkpoint_utils.py \
+            ubuntu@${{ secrets.FALLBACK_VM_IP }}:/home/ubuntu/
 
       - name: Start training on Spot VM
         run: |
-          ssh -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.SPOT_VM_IP }} "nohup python3 train.py > train.log 2>&1 &"
+          ssh -i ~/.ssh/spotops_key -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.SPOT_VM_IP }} \
+            "nohup python3 -u train.py > train.log 2>&1 &"
