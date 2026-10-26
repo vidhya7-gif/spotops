@@ -10,8 +10,16 @@ $o    = @("-o","StrictHostKeyChecking=no","-o","ConnectTimeout=10")
 foreach ($f in "train_real.py","checkpoint_utils_real.py","dashboard_real.py") {
     if (-not (Test-Path $f)) { Write-Host "MISSING $f in $(Get-Location). Move the downloaded files here first." -ForegroundColor Red; exit 1 }
 }
-$pw = Read-Host "Choose a dashboard password (letters/numbers only, no quotes)"
-if ($pw -notmatch '^[A-Za-z0-9@#%+=_.-]{6,}$') { Write-Host "Use 6+ simple characters." -ForegroundColor Red; exit 1 }
+function Ask-Pass($who) {
+    $s = Read-Host "Choose the $who password (6+ letters/numbers, may use @#%+=_.- ; no spaces or quotes)" -AsSecureString
+    $p = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+    if ($p -notmatch '^[A-Za-z0-9@#%+=_.-]{6,}$') { Write-Host "Use 6+ simple characters." -ForegroundColor Red; exit 1 }
+    return $p
+}
+$pwAdmin = Ask-Pass "ADMIN"
+$pwDev   = Ask-Pass "DEVELOPER"
+$pwView  = Ask-Pass "VIEWER"
+if (($pwAdmin -eq $pwDev) -or ($pwAdmin -eq $pwView) -or ($pwDev -eq $pwView)) { Write-Host "Use three different passwords." -ForegroundColor Red; exit 1 }
 
 foreach ($ip in @($spot,$fb)) {
     Write-Host "== training VM $ip" -ForegroundColor Cyan
@@ -23,10 +31,10 @@ foreach ($ip in @($spot,$fb)) {
 Write-Host "== storage VM $st (dashboard)" -ForegroundColor Cyan
 scp -i $k @o dashboard_real.py $k "ubuntu@${st}:/home/ubuntu/"
 ssh -i $k @o "ubuntu@$st" "chmod 600 ~/spotops-aws-key-v2.pem"
-ssh -i $k @o "ubuntu@$st" "printf '%s' '$pw' > ~/dash_pass.txt; chmod 600 ~/dash_pass.txt"
+ssh -i $k @o "ubuntu@$st" "printf 'admin:%s\ndeveloper:%s\nviewer:%s\n' '$pwAdmin' '$pwDev' '$pwView' > ~/dash_users.txt; chmod 600 ~/dash_users.txt; rm -f ~/dash_pass.txt"
 ssh -i $k @o "ubuntu@$st" "pkill -f '[d]ashboard_real.py'"
 ssh -i $k @o "ubuntu@$st" "nohup python3 dashboard_real.py > dashboard_real.log 2>&1 &"
 Start-Sleep 3
 ssh -i $k @o "ubuntu@$st" "ss -tlnp | grep 8001; cat dashboard_real.log"
 
-Write-Host "`nOpen http://${st}:8001   user: admin   password: what you just typed" -ForegroundColor Green
+Write-Host "`nOpen http://${st}:8001  and sign in as admin, developer or viewer with the passwords you just typed." -ForegroundColor Green
